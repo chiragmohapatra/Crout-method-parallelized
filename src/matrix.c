@@ -29,3 +29,15 @@ void print_matrix(double** A , int n){
         printf("\n");
     }
 }
+
+// write matrix contents to file
+void write_output(char fname[], double** arr, int n ){
+	FILE *f = fopen(fname, "w");
+	for( int i = 0; i < n; i++){
+		for(int j = 0; j < n; j++){
+			fprintf(f, "%0.12f ", arr[i][j]);
+		}
+		fprintf(f, "\n");
+	}
+	fclose(f);
+}

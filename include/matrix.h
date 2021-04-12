@@ -13,4 +13,7 @@ void destroy_matrix(double** A , int n);
 // prints matrix in pretty format
 void print_matrix(double** A , int n);
 
+// write matrix contents to file
+void write_output(char fname[], double** arr, int n );
+
 #endif

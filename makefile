@@ -31,3 +31,4 @@ $(LIB_DIR)/%.a: $(OBJ_DIR)/%.o
 
 clean :
 	$(RM) $(OBJ_DIR)/*.o $(LIBS) $(BIN_DIR)/crout
+	$(RM) output_*.txt
