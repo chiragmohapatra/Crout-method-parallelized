@@ -10,6 +10,33 @@ double** A; // the input matrix
 int num_threads;
 int strategy;
 
+void strat_0(double **A, double **L, double **U, int n) {
+    int i, j, k;
+    double sum = 0;
+    for (i = 0; i < n; i++) {
+        U[i][i] = 1;
+    }
+    for (j = 0; j < n; j++) {
+        for (i = j; i < n; i++) {
+            sum = 0;
+            for (k = 0; k < j; k++) {
+                sum = sum + L[i][k] * U[k][j];    
+            }
+            L[i][j] = A[i][j] - sum;
+        }
+        for (i = j; i < n; i++) {
+            sum = 0;
+            for(k = 0; k < j; k++) {
+                sum = sum + L[j][k] * U[k][i];
+            }
+            if (L[j][j] == 0) {                
+                exit(0);
+            }
+            U[j][i] = (A[j][i] - sum) / L[j][j];
+        }
+    }
+}
+
 
 int main(int argc , char* argv[]){
     if(argc != 5)
@@ -51,9 +78,22 @@ int main(int argc , char* argv[]){
     num_threads = atoi(argv[3]);
     strategy = atoi(argv[4]);
 
-    print_matrix(A,n);
+    //print_matrix(A,n);
+
+    double** L = allocate_matrix(n);
+    double** U = allocate_matrix(n);
+
+    if(strategy == 0){
+        strat_0(A,L,U,n);
+        print_matrix(L,n);
+        print_matrix(U,n);
+    }
+
+
 
     destroy_matrix(A,n);
+    destroy_matrix(L,n);
+    destroy_matrix(U,n);
 
     return 0;
 }
