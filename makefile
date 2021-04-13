@@ -19,11 +19,11 @@ all: $(EXEC)
 
 $(BIN_DIR)/crout: $(OBJECTS) $(LIBS)
 	@mkdir -p $(BIN_DIR)
-	gcc $(CXXFLAGS) -o $(BIN_DIR)/crout $^ -lm
+	gcc $(CXXFLAGS) -o $(BIN_DIR)/crout $^ -lm -fopenmp
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS)
 	@mkdir -p $(OBJ_DIR)
-	gcc $(CXXFLAGS) -c $< -o $@
+	gcc $(CXXFLAGS) -c $< -o $@ -fopenmp
 
 $(LIB_DIR)/%.a: $(OBJ_DIR)/%.o
 	@mkdir -p $(LIB_DIR)
