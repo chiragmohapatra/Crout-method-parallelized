@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <omp.h>
 
 #include "../include/matrix.h"
 
@@ -36,6 +37,61 @@ void strat_0(double **A, double **L, double **U, int n) {
         }
     }
 }
+
+void strat_1(double **A, double **L, double **U, int n) {
+    // setting up openmp
+    omp_set_num_threads(num_threads);
+    omp_set_nested(1); // for parallelising sum
+
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < n; i++) {
+        U[i][i] = 1;
+    }
+
+    // can't parallelize this outer loop since L[i][j] depends on L[i][k], k<j (and others)
+    for (int j = 0; j < n; j++) {
+        // static schedule since all iterations equally computationally expensive
+        #pragma omp parallel for schedule(static)
+        for (int i = j; i < n; i++) {
+            double sum = 0;
+            // parallelizing sum according to first strategy of assignment 1
+            #pragma omp parallel
+            {
+                double partial_sum = 0;
+                #pragma omp for
+                for (int k = 0; k < j; k++) {
+                    partial_sum = partial_sum + L[i][k] * U[k][j];    
+                }
+                #pragma omp critical
+                {
+                    sum += partial_sum;
+                }
+            }
+            L[i][j] = A[i][j] - sum;
+        }
+        #pragma omp parallel for schedule(static)
+        for (int i = j; i < n; i++) {
+            double sum = 0;
+            #pragma omp parallel
+            {
+                double partial_sum = 0;
+                #pragma omp for
+                for (int k = 0; k < j; k++) {
+                    partial_sum = partial_sum + L[j][k] * U[k][i];    
+                }
+                #pragma omp critical
+                {
+                    sum += partial_sum;
+                }
+            }
+            if (L[j][j] == 0) {                
+                exit(0);
+            }
+            U[j][i] = (A[j][i] - sum) / L[j][j];
+        }
+    }
+}
+
 
 int main(int argc , char* argv[]){
     if(argc != 5)
@@ -82,13 +138,19 @@ int main(int argc , char* argv[]){
     double** L = allocate_matrix(n);
     double** U = allocate_matrix(n);
 
-    if(strategy == 0){
-        strat_0(A,L,U,n);
-        print_matrix(L,n);
-        printf("\n");
-        print_matrix(U,n);
+    switch(strategy){
+        case 0:
+            strat_0(A,L,U,n);
+            break;
+        case 1:
+            strat_1(A,L,U,n);
+            break;
     }
     
+    print_matrix(L,n);
+    printf("\n");
+    print_matrix(U,n);
+
     // write output to file
     char fname[] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_',(char)('0'+num_threads),'.','t','x','t','\0'};
     write_output(fname, L, n);
