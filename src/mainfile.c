@@ -214,7 +214,6 @@ void strat_3(double **A, double **L, double **U, int n) {
     }
 }
 
-
 int main(int argc , char* argv[]){
     if(argc != 5)
         exit(EXIT_FAILURE);

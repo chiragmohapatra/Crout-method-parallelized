@@ -30,5 +30,5 @@ $(LIB_DIR)/%.a: $(OBJ_DIR)/%.o
 	ar cr $@ $<
 
 clean :
-	$(RM) $(OBJ_DIR)/*.o $(LIBS) $(BIN_DIR)/crout
+	$(RM) $(OBJ_DIR)/*.o $(LIBS) $(BIN_DIR)/crout $(BIN_DIR)/crout_mpi
 	$(RM) output_*.txt

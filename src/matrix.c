@@ -8,6 +8,12 @@ double** allocate_matrix(int n){
         A[i] = (double*)malloc(n*sizeof(double));
     }
 
+    for(int i = 0 ; i < n ; i++){
+        for(int j = 0 ; j < n ; j++){
+            A[i][j] = 0;
+        }
+    }
+
     return A;
 }
 
