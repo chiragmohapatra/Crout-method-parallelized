@@ -73,13 +73,13 @@ int main(int argc , char* argv[]){
 
         int k = 0;
         
-        while(getline(&line, &len, fp) != -1){
+        while(getline(&line, &len, fp) != -1 && k<n){
             assert(k < n);
 
             int l = 0;
             char* pch = strtok (line," ");
 
-            while(pch != NULL){
+            while(pch != NULL && l<n){
                 assert(l < n);
 
                 A[k][l] = atof(pch);
