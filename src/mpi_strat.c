@@ -231,28 +231,36 @@ int main(int argc , char* argv[]){
                 MPI_COMM_WORLD,
                 &status);
 
-            MPI_Recv(&temp4,
-                n_elements_recieved*j,MPI_DOUBLE,0,2,
-                MPI_COMM_WORLD,
-                &status);
-
-            double sum_arr1[n_elements_recieved] , sum_arr2[n_elements_recieved];
+            double sum_arr1[n_elements_recieved];
 
             for(int i = 0 ; i < n_elements_recieved ; i++){
-                double sum1 = 0 , sum2 = 0;
+                double sum1 = 0;
                 for (int k = 0; k < j; k++) {
-                    sum1 = sum1 + temp1[i][k] * temp2[k];
-                    sum2 = sum2 + temp4[k][i] * temp3[k];    
+                    sum1 = sum1 + temp1[i][k] * temp2[k];    
                 }
                 sum_arr1[i] = sum1;
-                sum_arr2[i] = sum2;
             }
 
             MPI_Send(&sum_arr1,
                 n_elements_recieved,MPI_DOUBLE,0,0,
                 MPI_COMM_WORLD);
 
-            MPI_Send(&sum_arr2,
+            MPI_Recv(&temp4,
+                n_elements_recieved*j,MPI_DOUBLE,0,2,
+                MPI_COMM_WORLD,
+                &status);
+
+            //double sum_arr2[n_elements_recieved];
+
+            for(int i = 0 ; i < n_elements_recieved ; i++){
+                double sum1 = 0;
+                for (int k = 0; k < j; k++) {
+                    sum1 = sum1 + temp4[k][i] * temp3[k];    
+                }
+                sum_arr1[i] = sum1;
+            }
+
+            MPI_Send(&sum_arr1,
                 n_elements_recieved,MPI_DOUBLE,0,1,
                 MPI_COMM_WORLD);
         }
@@ -260,7 +268,14 @@ int main(int argc , char* argv[]){
 
     if(my_rank == 0){
         // write output to file
-        char fname[] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_',(char)('0'+num_threads),'.','t','x','t','\0'};
+        char fname[100] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_'};
+        char str_threads[5];
+        sprintf(str_threads , "%d", num_threads);
+        char temp[] = {'.','t','x','t','\0'};
+
+        strcat(fname,str_threads);
+        strcat(fname,temp);
+
         write_output(fname, L, n);
         fname[7] = 'U';
         write_output(fname, U, n);

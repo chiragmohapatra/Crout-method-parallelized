@@ -291,7 +291,14 @@ int main(int argc , char* argv[]){
     // print_matrix(U,n);
 
     // write output to file
-    char fname[] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_',(char)('0'+num_threads),'.','t','x','t','\0'};
+    char fname[100] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_'};
+    char str_threads[5];
+    sprintf(str_threads , "%d", num_threads);
+    char temp[] = {'.','t','x','t','\0'};
+
+    strcat(fname,str_threads);
+    strcat(fname,temp);
+
     write_output(fname, L, n);
     fname[7] = 'U';
     write_output(fname, U, n);
