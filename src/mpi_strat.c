@@ -39,9 +39,19 @@ int main(int argc , char* argv[]){
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
 
-    double A[n][n];
-    double L[n][n];
-    double U[n][n];
+    double** A;
+    double** L;
+    double** U;
+
+    A = malloc(n*sizeof(double*));
+    L = malloc(n*sizeof(double*));
+    U = malloc(n*sizeof(double*));
+
+    for(int i = 0 ; i < n ; i++){
+        A[i] = malloc(n*sizeof(double*));
+        L[i] = malloc(n*sizeof(double*));
+        U[i] = malloc(n*sizeof(double*));
+    }
 
     for(int i = 0 ; i < n ; i++){
         for(int j = 0 ; j < n ; j++){
@@ -53,7 +63,6 @@ int main(int argc , char* argv[]){
 
     // reading A from file
     if(my_rank == 0){
-
         FILE* fp = fopen(file_name,"r");
 
         if(fp == NULL)
@@ -83,9 +92,34 @@ int main(int argc , char* argv[]){
         fclose(fp);
         if(line)
             free(line);
+
+        double temp[n][n];
+
+        for(int i = 0 ; i < n ; i++){
+            for(int j = 0 ; j < n ; j++)
+                temp[i][j] = A[i][j];
+        }
+
+        for(int i = 1 ; i < comm_sz ; i++){
+            MPI_Send(&temp,
+                n*n,MPI_DOUBLE,i,0,
+                MPI_COMM_WORLD);
+        }
     }
 
-    MPI_Bcast(&A , n*n , MPI_DOUBLE , 0 , MPI_COMM_WORLD);
+    else{
+        double temp[n][n];
+
+        MPI_Recv(&temp,
+            n*n,MPI_DOUBLE,0,0,
+            MPI_COMM_WORLD,
+            &status);
+
+        for(int i = 0 ; i < n ; i++){
+            for(int j = 0 ; j < n ; j++)
+                A[i][j] = temp[i][j];
+        }
+    }
 
     for (int i = 0; i < n; i++) {
         U[i][i] = 1;
@@ -249,6 +283,16 @@ int main(int argc , char* argv[]){
         }
         fclose(f);
     }
+
+    for(int i = 0 ; i < n ; i++){
+        free(A[i]);
+        free(L[i]);
+        free(U[i]);
+    }
+
+    free(A);
+    free(L);
+    free(U);
 
     MPI_Finalize();
     return 0;
