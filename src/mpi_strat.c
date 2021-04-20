@@ -121,16 +121,15 @@ int main(int argc , char* argv[]){
             }
 
             // Now we will collect the computations from all the other processes
-            for(int i = 0 ; i < 2*(comm_sz - 1) ; i++){
-                double sum_arr[n];
+            for(int i = 1 ; i < comm_sz; i++){
+                double sum_arr[n*2];
 
                 MPI_Recv(&sum_arr,
-                    n,MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,
+                    n*2,MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,
                     MPI_COMM_WORLD,
                     &status);
 
                 int sender = status.MPI_SOURCE;
-                int tag = status.MPI_TAG;
 
                 int l = sender*elements_per_process;
                 int u = (sender + 1)*elements_per_process;
@@ -141,11 +140,10 @@ int main(int argc , char* argv[]){
                 if(sender == comm_sz - 1)
                     u = n;
 
+                int m = 0;
                 for (int i = l; i < u; i++){
-                    if(tag == 0)
-                        L[i*n + j] = sum_arr[i - l];
-                    else
-                        U[j*n + i] = sum_arr[i - l];
+                    L[i*n + j] = sum_arr[m++];
+                    U[j*n + i] = sum_arr[m++];
                 }
             }
         }
@@ -166,39 +164,26 @@ int main(int argc , char* argv[]){
                 MPI_Send(&sum_arr1,
                     1,MPI_DOUBLE,0,0,
                     MPI_COMM_WORLD);
-
-                MPI_Send(&sum_arr1,
-                    1,MPI_DOUBLE,0,1,
-                    MPI_COMM_WORLD);
             }
 
             else{
-                double sum_arr1[n_elements_received];
+                double sum_arr1[n_elements_received*2];
+                int m = 0;
 
                 for (int i = l; i < u; i++) {
-                    double sum = 0;
+                    double sum1 = 0 , sum2 = 0;
                     for (int k = 0; k < j; k++) {
-                        sum = sum + L[i*n + k] * temp2[k];    
+                        sum1 = sum1 + L[i*n + k] * temp2[k];
+                        sum2 = sum2 + U[k*n + i] * temp3[k];    
                     }
-                    L[i*n + j] = A[i*n + j] - sum;
-                    sum_arr1[i - l] = L[i*n + j];
+                    L[i*n + j] = A[i*n + j] - sum1;
+                    sum_arr1[m++] = L[i*n + j];
+                    U[j*n + i] = (A[j*n + i] - sum2) / temp3[j];
+                    sum_arr1[m++] = U[j*n + i];
                 }
 
                 MPI_Send(&sum_arr1,
-                    n_elements_received,MPI_DOUBLE,0,0,
-                    MPI_COMM_WORLD);
-
-                for (int i = l; i < u; i++) {
-                    double sum = 0;
-                    for (int k = 0; k < j; k++) {
-                        sum = sum + U[k*n + i] * temp3[k];    
-                    }
-                    U[j*n + i] = (A[j*n + i] - sum) / temp3[j];
-                    sum_arr1[i - l] = U[j*n + i];
-                }
-
-                MPI_Send(&sum_arr1,
-                    n_elements_received,MPI_DOUBLE,0,1,
+                    n_elements_received*2,MPI_DOUBLE,0,0,
                     MPI_COMM_WORLD);
             }
         }
