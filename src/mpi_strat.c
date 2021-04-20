@@ -48,9 +48,9 @@ int main(int argc , char* argv[]){
     U = malloc(n*sizeof(double*));
 
     for(int i = 0 ; i < n ; i++){
-        A[i] = malloc(n*sizeof(double*));
-        L[i] = malloc(n*sizeof(double*));
-        U[i] = malloc(n*sizeof(double*));
+        A[i] = malloc(n*sizeof(double));
+        L[i] = malloc(n*sizeof(double));
+        U[i] = malloc(n*sizeof(double));
     }
 
     for(int i = 0 ; i < n ; i++){
@@ -92,34 +92,9 @@ int main(int argc , char* argv[]){
         fclose(fp);
         if(line)
             free(line);
-
-        double temp[n][n];
-
-        for(int i = 0 ; i < n ; i++){
-            for(int j = 0 ; j < n ; j++)
-                temp[i][j] = A[i][j];
-        }
-
-        for(int i = 1 ; i < comm_sz ; i++){
-            MPI_Send(&temp,
-                n*n,MPI_DOUBLE,i,0,
-                MPI_COMM_WORLD);
-        }
     }
 
-    else{
-        double temp[n][n];
-
-        MPI_Recv(&temp,
-            n*n,MPI_DOUBLE,0,0,
-            MPI_COMM_WORLD,
-            &status);
-
-        for(int i = 0 ; i < n ; i++){
-            for(int j = 0 ; j < n ; j++)
-                A[i][j] = temp[i][j];
-        }
-    }
+    MPI_Bcast(&(A[0][0]) , n*n , MPI_DOUBLE , 0 , MPI_COMM_WORLD);
 
     for (int i = 0; i < n; i++) {
         U[i][i] = 1;
