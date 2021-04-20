@@ -190,7 +190,7 @@ void strat_3(double **A, double **L, double **U, int n) {
             {
                 #pragma omp section
                 {
-                    #pragma omp for schedule(static)
+                    #pragma omp parallel for schedule(static)
                     for (int i = j+1; i < n; i++) {
                         double sum = 0;
                         for (int k = 0; k < j; k++) {
@@ -201,7 +201,7 @@ void strat_3(double **A, double **L, double **U, int n) {
                 }
                 #pragma omp section
                 {
-                    #pragma omp for schedule(static)
+                    #pragma omp parallel for schedule(static)
                     for (int i = j; i < n; i++) {
                         double sum = 0;
                         for(int k = 0; k < j; k++) {
