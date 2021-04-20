@@ -260,7 +260,9 @@ int main(int argc , char* argv[]){
 
     if(my_rank == 0){
         // write output to file
-        char fname[] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_',(char)('0'+num_threads),'.','t','x','t','\0'};
+        char fname[100] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_', '\0'};
+        strcat(fname, argv[3]);
+        strcat(fname, ".txt");
         write_output(fname, L, n);
         fname[7] = 'U';
         write_output(fname, U, n);

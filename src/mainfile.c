@@ -115,56 +115,40 @@ void strat_2(double **A, double **L, double **U, int n) {
     }
 
     for (int j = 0; j < n; j++) {
-        // calculate L[j][j] separately, since 2nd section depends on it
-        // double sum = 0;
-        // for (int k = 0; k < j; k++) {
-        //     sum = sum + L[j][k] * U[k][j];    
-        // }
-        // L[j][j] = A[j][j] - sum;
-        
-        // calculate L[j..n][j] and U[j][j..n] in simultaneous sections 
         #pragma omp parallel
         {
-        // #pragma omp sections
-        // {
-        //     #pragma omp section
-        //     {
-                for (int i = j; i < n; i++) {
-                    #pragma omp sections nowait
+            for (int i = j; i < n; i++) {
+                #pragma omp sections nowait
+                {
+                    #pragma omp section
                     {
-                        #pragma omp section
-                        {
-                            double sum = 0;
-                            for (int k = 0; k < j; k++) {
-                                sum = sum + L[i][k] * U[k][j];    
-                            }
-                            L[i][j] = A[i][j] - sum;
+                        double sum = 0;
+                        for (int k = 0; k < j; k++) {
+                            sum = sum + L[i][k] * U[k][j];    
                         }
+                        L[i][j] = A[i][j] - sum;
                     }
                 }
-                #pragma omp barrier
-            // }
-            // #pragma omp section
-            // {
-                for (int i = j; i < n; i++) {
-                    #pragma omp sections nowait
+            }
+            #pragma omp barrier
+
+            for (int i = j; i < n; i++) {
+                #pragma omp sections nowait
+                {
+                    #pragma omp section
                     {
-                        #pragma omp section
-                        {
-                            double sum = 0;
-                            for(int k = 0; k < j; k++) {
-                                sum = sum + L[j][k] * U[k][i];
-                            }
-                            if (L[j][j] == 0) {                
-                                exit(0);
-                            }
-                            U[j][i] = (A[j][i] - sum) / L[j][j];
+                        double sum = 0;
+                        for(int k = 0; k < j; k++) {
+                            sum = sum + L[j][k] * U[k][i];
                         }
+                        if (L[j][j] == 0) {                
+                            exit(0);
+                        }
+                        U[j][i] = (A[j][i] - sum) / L[j][j];
                     }
                 }
-                #pragma omp barrier
-            // }
-        // }
+            }
+            #pragma omp barrier
         }
     }
 }
@@ -317,7 +301,9 @@ int main(int argc , char* argv[]){
     // print_matrix(U,n);
 
     // write output to file
-    char fname[] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_',(char)('0'+num_threads),'.','t','x','t','\0'};
+    char fname[100] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_', '\0'};
+    strcat(fname, argv[3]);
+    strcat(fname, ".txt");
     write_output(fname, L, n);
     fname[7] = 'U';
     write_output(fname, U, n);
