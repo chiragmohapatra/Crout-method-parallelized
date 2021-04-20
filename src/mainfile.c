@@ -102,43 +102,53 @@ void strat_2(double **A, double **L, double **U, int n) {
     // setting up openmp
     omp_set_num_threads(num_threads);
 
-    for (int i = 0; i < n; i++) {
-        U[i][i] = 1;
-    }
-    for (int j = 0; j < n; j++) {
-        // calculate L[j][j] separately, since 2nd section depends on it
-        double sum = 0;
-        for (int k = 0; k < j; k++) {
-            sum = sum + L[j][k] * U[k][j];    
+    #pragma omp parallel
+    {
+        for (int i = 0; i < n; i++) {
+            #pragma omp sections nowait
+            {
+                #pragma omp section
+                U[i][i] = 1;
+            }
         }
-        L[j][j] = A[j][j] - sum;
-        
-        // calculate L[j..n][j] and U[j][j..n] in simultaneous sections 
-        #pragma omp parallel sections
+        #pragma omp barrier
+    }
+
+    for (int j = 0; j < n; j++) {
+        #pragma omp parallel
         {
-            #pragma omp section
-            {
-                for (int i = j; i < n; i++) {
-                    double sum = 0;
-                    for (int k = 0; k < j; k++) {
-                        sum = sum + L[i][k] * U[k][j];    
+            for (int i = j; i < n; i++) {
+                #pragma omp sections nowait
+                {
+                    #pragma omp section
+                    {
+                        double sum = 0;
+                        for (int k = 0; k < j; k++) {
+                            sum = sum + L[i][k] * U[k][j];    
+                        }
+                        L[i][j] = A[i][j] - sum;
                     }
-                    L[i][j] = A[i][j] - sum;
                 }
             }
-            #pragma omp section
-            {
-                for (int i = j; i < n; i++) {
-                    double sum = 0;
-                    for(int k = 0; k < j; k++) {
-                        sum = sum + L[j][k] * U[k][i];
+            #pragma omp barrier
+
+            for (int i = j; i < n; i++) {
+                #pragma omp sections nowait
+                {
+                    #pragma omp section
+                    {
+                        double sum = 0;
+                        for(int k = 0; k < j; k++) {
+                            sum = sum + L[j][k] * U[k][i];
+                        }
+                        if (L[j][j] == 0) {                
+                            exit(0);
+                        }
+                        U[j][i] = (A[j][i] - sum) / L[j][j];
                     }
-                    if (L[j][j] == 0) {                
-                        exit(0);
-                    }
-                    U[j][i] = (A[j][i] - sum) / L[j][j];
                 }
             }
+            #pragma omp barrier
         }
     }
 }
@@ -291,14 +301,9 @@ int main(int argc , char* argv[]){
     // print_matrix(U,n);
 
     // write output to file
-    char fname[100] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_'};
-    char str_threads[5];
-    sprintf(str_threads , "%d", num_threads);
-    char temp[] = {'.','t','x','t','\0'};
-
-    strcat(fname,str_threads);
-    strcat(fname,temp);
-
+    char fname[100] = {'o','u','t','p','u','t','_','L','_',(char)('0'+strategy),'_', '\0'};
+    strcat(fname, argv[3]);
+    strcat(fname, ".txt");
     write_output(fname, L, n);
     fname[7] = 'U';
     write_output(fname, U, n);
