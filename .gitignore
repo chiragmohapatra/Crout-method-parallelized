@@ -2,3 +2,4 @@ bin/
 lib/
 obj/
 output_*.txt
+input_rand.txt

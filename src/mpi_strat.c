@@ -4,18 +4,6 @@
 #include <assert.h>
 #include <mpi.h>
 
-// write matrix contents to file
-void write_output(char fname[], double** arr, int n ){
-	FILE *f = fopen(fname, "w");
-	for( int i = 0; i < n; i++){
-		for(int j = 0; j < n; j++){
-			fprintf(f, "%0.12f ", arr[i][j]);
-		}
-		fprintf(f, "\n");
-	}
-	fclose(f);
-}
-
 int main(int argc , char* argv[]){
     int n;  // square matrix of size n*n
     char* file_name; // name of the input file
@@ -39,25 +27,15 @@ int main(int argc , char* argv[]){
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
 
-    double** A;
-    double** L;
-    double** U;
-
-    A = malloc(n*sizeof(double*));
-    L = malloc(n*sizeof(double*));
-    U = malloc(n*sizeof(double*));
-
-    for(int i = 0 ; i < n ; i++){
-        A[i] = malloc(n*sizeof(double));
-        L[i] = malloc(n*sizeof(double));
-        U[i] = malloc(n*sizeof(double));
-    }
+    double* A = malloc(n*n*sizeof(double));
+    double* L = malloc(n*n*sizeof(double));
+    double* U = malloc(n*n*sizeof(double));
 
     for(int i = 0 ; i < n ; i++){
         for(int j = 0 ; j < n ; j++){
-            A[i][j] = 0;
-            L[i][j] = 0;
-            U[i][j] = 0;
+            A[i*n + j] = 0;
+            L[i*n + j] = 0;
+            U[i*n + j] = 0;
         }
     }
 
@@ -82,7 +60,7 @@ int main(int argc , char* argv[]){
             while(pch != NULL && l<n){
                 assert(l < n);
 
-                A[k][l] = atof(pch);
+                A[k*n + l] = atof(pch);
                 pch = strtok (NULL, " ");
                 l++;
             }
@@ -94,36 +72,36 @@ int main(int argc , char* argv[]){
             free(line);
     }
 
-    MPI_Bcast(&(A[0][0]) , n*n , MPI_DOUBLE , 0 , MPI_COMM_WORLD);
+    MPI_Bcast(A, n*n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     for (int i = 0; i < n; i++) {
-        U[i][i] = 1;
+        U[i*n + i] = 1;
     }
 
     int elements_per_process = n/comm_sz;
 
     for (int j = 0; j < n; j++){
-        double temp2[j]; // this is essentially U[k][j]
-        double temp3[j+1]; // this is essentially L[j][k]
+        double temp2[j]; // this is essentially U[k*n + j]
+        double temp3[j+1]; // this is essentially L[j*n + k]
 
         if(my_rank == 0){
-            // calculate L[j][j] early since this is used in U calculation
+            // calculate L[j*n + j] early since this is used in U calculation
             double sum = 0;
             for (int k = 0; k < j; k++) {
-                sum = sum + L[j][k] * U[k][j];
+                sum = sum + L[j*n + k] * U[k*n + j];
             }
-            L[j][j] = A[j][j] - sum;
+            L[j*n + j] = A[j*n + j] - sum;
 
-            if(L[j][j] == 0){
+            if(L[j*n + j] == 0){
                 MPI_Finalize();
                 exit(0);
             }
 
             for(int k = 0 ; k < j ; k++){
-                temp2[k] = U[k][j];
-                temp3[k] = L[j][k];
+                temp2[k] = U[k*n + j];
+                temp3[k] = L[j*n + k];
             }
-            temp3[j] = L[j][j];
+            temp3[j] = L[j*n + j];
         }
 
         MPI_Bcast(&temp2, j, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -135,11 +113,11 @@ int main(int argc , char* argv[]){
             for(int i = j ; i < elements_per_process ; i++){
                 double sum1 = 0 , sum2 = 0;
                 for (int k = 0; k < j; k++) {
-                    sum1 = sum1 + L[i][k] * U[k][j];  
-                    sum2 = sum2 + L[j][k] * U[k][i];  
+                    sum1 = sum1 + L[i*n + k] * U[k*n + j];  
+                    sum2 = sum2 + L[j*n + k] * U[k*n + i];  
                 }
-                L[i][j] = A[i][j] - sum1;
-                U[j][i] = (A[j][i] - sum2) / L[j][j];
+                L[i*n + j] = A[i*n + j] - sum1;
+                U[j*n + i] = (A[j*n + i] - sum2) / L[j*n + j];
             }
 
             // Now we will collect the computations from all the other processes
@@ -160,14 +138,14 @@ int main(int argc , char* argv[]){
                 if(l < j)
                     l = j;
 
-                if(u > n)
+                if(sender == comm_sz - 1)
                     u = n;
 
                 for (int i = l; i < u; i++){
                     if(tag == 0)
-                        L[i][j] = sum_arr[i - l];
+                        L[i*n + j] = sum_arr[i - l];
                     else
-                        U[j][i] = sum_arr[i - l];
+                        U[j*n + i] = sum_arr[i - l];
                 }
             }
         }
@@ -179,7 +157,7 @@ int main(int argc , char* argv[]){
             if(l < j)
                 l = j;
 
-            if(u > n)
+            if(my_rank == comm_sz - 1)
                 u = n;
 
             int n_elements_received = u - l;
@@ -200,10 +178,10 @@ int main(int argc , char* argv[]){
                 for (int i = l; i < u; i++) {
                     double sum = 0;
                     for (int k = 0; k < j; k++) {
-                        sum = sum + L[i][k] * temp2[k];    
+                        sum = sum + L[i*n + k] * temp2[k];    
                     }
-                    L[i][j] = A[i][j] - sum;
-                    sum_arr1[i - l] = L[i][j];
+                    L[i*n + j] = A[i*n + j] - sum;
+                    sum_arr1[i - l] = L[i*n + j];
                 }
 
                 MPI_Send(&sum_arr1,
@@ -213,10 +191,10 @@ int main(int argc , char* argv[]){
                 for (int i = l; i < u; i++) {
                     double sum = 0;
                     for (int k = 0; k < j; k++) {
-                        sum = sum + U[k][i] * temp3[k];    
+                        sum = sum + U[k*n + i] * temp3[k];    
                     }
-                    U[j][i] = (A[j][i] - sum) / temp3[j];
-                    sum_arr1[i - l] = U[j][i];
+                    U[j*n + i] = (A[j*n + i] - sum) / temp3[j];
+                    sum_arr1[i - l] = U[j*n + i];
                 }
 
                 MPI_Send(&sum_arr1,
@@ -241,7 +219,7 @@ int main(int argc , char* argv[]){
         f = fopen(fname, "w");
         for( int i = 0; i < n; i++){
             for(int j = 0; j < n; j++){
-                fprintf(f, "%0.12f ", L[i][j]);
+                fprintf(f, "%0.12f ", L[i*n + j]);
             }
             fprintf(f, "\n");
         }
@@ -252,17 +230,11 @@ int main(int argc , char* argv[]){
         f = fopen(fname, "w");
         for( int i = 0; i < n; i++){
             for(int j = 0; j < n; j++){
-                fprintf(f, "%0.12f ", U[i][j]);
+                fprintf(f, "%0.12f ", U[i*n + j]);
             }
             fprintf(f, "\n");
         }
         fclose(f);
-    }
-
-    for(int i = 0 ; i < n ; i++){
-        free(A[i]);
-        free(L[i]);
-        free(U[i]);
     }
 
     free(A);
