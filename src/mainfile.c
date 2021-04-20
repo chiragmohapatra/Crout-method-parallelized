@@ -107,27 +107,36 @@ void strat_2(double **A, double **L, double **U, int n) {
     }
     for (int j = 0; j < n; j++) {
         // calculate L[j][j] separately, since 2nd section depends on it
-        double sum = 0;
-        for (int k = 0; k < j; k++) {
-            sum = sum + L[j][k] * U[k][j];    
-        }
-        L[j][j] = A[j][j] - sum;
+        // double sum = 0;
+        // for (int k = 0; k < j; k++) {
+        //     sum = sum + L[j][k] * U[k][j];    
+        // }
+        // L[j][j] = A[j][j] - sum;
         
         // calculate L[j..n][j] and U[j][j..n] in simultaneous sections 
-        #pragma omp parallel sections
+        #pragma omp parallel
         {
-            #pragma omp section
-            {
+        // #pragma omp sections
+        // {
+        //     #pragma omp section
+        //     {
                 for (int i = j; i < n; i++) {
-                    double sum = 0;
-                    for (int k = 0; k < j; k++) {
-                        sum = sum + L[i][k] * U[k][j];    
+                    #pragma omp sections nowait
+                    {
+                        #pragma omp section
+                        {
+                            double sum = 0;
+                            for (int k = 0; k < j; k++) {
+                                sum = sum + L[i][k] * U[k][j];    
+                            }
+                            L[i][j] = A[i][j] - sum;
+                        }
                     }
-                    L[i][j] = A[i][j] - sum;
                 }
-            }
-            #pragma omp section
-            {
+                #pragma omp barrier
+            // }
+            // #pragma omp section
+            // {
                 for (int i = j; i < n; i++) {
                     double sum = 0;
                     for(int k = 0; k < j; k++) {
@@ -138,7 +147,8 @@ void strat_2(double **A, double **L, double **U, int n) {
                     }
                     U[j][i] = (A[j][i] - sum) / L[j][j];
                 }
-            }
+            // }
+        // }
         }
     }
 }
