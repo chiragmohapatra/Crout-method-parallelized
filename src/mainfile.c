@@ -165,20 +165,11 @@ void strat_3(double **A, double **L, double **U, int n) {
 
     for (int j = 0; j < n; j++) {
         // calculate L[j][j] separately
-        double sum = 0;
-        #pragma omp parallel
-        {
-            double partial_sum = 0;
-            #pragma omp for
-            for (int k = 0; k < j; k++) {
-                partial_sum = partial_sum + L[j][k] * U[k][j];    
-            }
-            #pragma omp critical
-            {
-                sum += partial_sum;
-            }
+        double sum1 = 0;
+        for (int k = 0; k < j; k++) {
+            sum1 = sum1 + L[j][k] * U[k][j];    
         }
-        L[j][j] = A[j][j] - sum;
+        L[j][j] = A[j][j] - sum1;
 
         // calculate L[j..n][j] and U[j][j..n] in simultaneous sections 
         #pragma omp parallel sections
